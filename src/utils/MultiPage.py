@@ -4,7 +4,6 @@ class MultiPage:
     def __init__(self):
         self.apps = []
         self.app_names = []
-        self.default = ''
 
     def add_app(self, title, func, args=None):
         self.app_names.append(title)
@@ -17,17 +16,18 @@ class MultiPage:
     def run(self):
         # get query_params
         query_params = st.experimental_get_query_params()
-        self.default = query_params["app"][0] if "app" in query_params else None
-        default_index = self.app_names.index(self.default) if self.default else 0
-        # simple radio button for navigation
-        app = st.sidebar.radio(
-            'Go To',
-            self.apps,
-            index = default_index,
-            format_func=lambda app: app['title'],
-            key = 'Navigation')
-        # reflect the current app in query_params
-        self.default = app['title']
-        st.experimental_set_query_params(app=self.default)
-        # runs the selected app with passes args
-        app['function'](app['args'])
+        choice = query_params["app"][0] if "app" in query_params else None
+        # common key
+        key='Navigation'
+        # on_change callback
+        def on_change():
+            params = st.experimental_get_query_params()
+            params['app'] = st.session_state[key]
+            st.experimental_set_query_params(**params)
+        # update session state
+        st.session_state[key] = choice if choice in self.app_names else self.app_names[0]
+        appname = st.sidebar.radio('Go To', self.app_names, on_change=on_change, key=key)
+        # run the selected app
+        for app in self.apps:
+            if app['title'] == appname:
+                app['function'](app['args'])
